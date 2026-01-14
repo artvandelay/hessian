@@ -1,0 +1,162 @@
+# Agents.md — Validation of Rahimi Hessian Inverse Product Solver
+
+## Purpose
+
+This project exists to **validate and study the original implementation** of the Hessian inverse product solver from:
+
+> A. Rahimi, *Fast Inversion of the Hessian of a Deep Network*, arXiv:2601.06096
+
+The goal is **not** to redesign or simplify the algorithm, but to:
+
+1. Run the original solver exactly as implemented.
+2. Verify numerical correctness.
+3. Verify linear scaling with depth.
+4. Compare against conjugate-gradient (CG) Hessian inversion.
+5. Establish a clean baseline for future optimization research.
+
+---
+
+## Background (mental model)
+
+For a tall-skinny deep network, the Hessian has structured polynomial form. Rahimi shows it can be inverted via an augmented block system which reduces to a block-tridiagonal solve in linear time with depth.
+
+This repo is therefore treated as:
+
+> A linear-algebra system solver, not an optimizer.
+
+We treat it as a scientific artifact to be tested and validated, not as a training framework.
+
+---
+
+## Agent Roles
+
+### Agent 1 — Environment Setup Agent
+
+Responsibility:
+
+* Clone repo.
+* Install dependencies.
+* Verify imports work.
+
+Success condition:
+
+```python
+from hessian import hessian_inverse_product
+```
+
+imports without error.
+
+---
+
+### Agent 2 — Structural Inspection Agent
+
+Responsibility:
+
+* Read and summarize:
+
+  * `hessian.py`
+  * `block_partitioned_matrices.py`
+  * `examples.py`
+* Produce a map of which functions implement:
+
+  * Augmented system construction
+  * Permutation
+  * Block solve
+  * Back-substitution
+
+Success condition:
+
+* Clear conceptual flow of solver stages.
+
+---
+
+### Agent 3 — Correctness Validation Agent
+
+Responsibility:
+
+* Build a test harness that:
+
+  1. Generates a tall network from `examples.py`.
+  2. Samples random vector `v`.
+  3. Computes:
+
+     * Rahimi solver: `(H+epsI)^-1 v`
+     * CG approximation of `(H+epsI)^-1 v`
+  4. Measures L2 difference.
+
+Success condition:
+
+```
+||x_rahimi - x_cg|| / ||x_cg|| < 1e-4
+```
+
+---
+
+### Agent 4 — Scaling Benchmark Agent
+
+Responsibility:
+
+* Measure runtime for L = [20, 40, 80, 160, 320]
+* Plot or print runtime vs depth.
+* Verify near-linear growth.
+
+Success condition:
+
+* Empirical slope ~ O(L).
+
+---
+
+### Agent 5 — Stability Analysis Agent
+
+Responsibility:
+
+* Sweep epsilon values.
+* Observe conditioning, numerical stability.
+* Report divergence or NaNs.
+
+---
+
+### Agent 6 — Optimization Integration Agent (optional, after validation)
+
+Responsibility:
+
+* Integrate solver into a Newton-style update on a toy regression task.
+* Demonstrate why damping + trust region is necessary.
+
+---
+
+## Rules
+
+1. Do not modify Rahimi solver code.
+2. All experiments must use original implementation.
+3. Any training usage must be explicitly marked as experimental.
+4. All claims must be supported by numeric results.
+
+---
+
+## Deliverables
+
+* test_solver_correctness.py
+* test_solver_scaling.py
+* test_solver_stability.py
+* structural_map.md
+* benchmark_results.md
+
+---
+
+## Scientific Standard
+
+If results differ from paper claims:
+
+* Assume our test is wrong first.
+* Only challenge solver after reproducing reference behavior.
+
+---
+
+## End State
+
+At completion, we should be able to answer confidently:
+
+> Does Rahimi’s Hessian inverse product solver work, scale linearly, and match CG numerically?
+
+---
